@@ -1,127 +1,173 @@
-# Context-Aware Multi-Agent Pentest (Build From Scratch)
+# Context-Aware Multi-Agent System for Web Vulnerability Assessment using LLMs
 
-## Project Idea
+## 1. Project Summary
 
-Topic: **Context-Aware Multi-Agent System for Web Vulnerability Assessment using LLMs**.
+Đây là đồ án xây dựng hệ thống đánh giá lỗ hổng web theo kiến trúc multi-agent, có chia sẻ ngữ cảnh giữa các pha và dùng LLM theo hướng phòng thủ (blue-team).
 
-System has 3 agents with shared memory:
+Hệ thống hiện có 4 agent:
 
-1. The Scout (Reconnaissance)
-1. The Analyst (Vulnerability Assessment)
-1. The Writer (Reporting)
+1. Scout: thu thập bề mặt tấn công (HTTP probe, endpoint inventory, port/service scan).
+2. Analyst: phân tích rủi ro bằng rule-based + LLM.
+3. Verifier: xác minh finding, hiệu chỉnh confidence, kiểm tra CVE hint qua NVD API.
+4. Writer: tổng hợp báo cáo Markdown chuyên nghiệp.
 
-## Workflow Diagram
+## 2. Scope and Goal
+
+Mục tiêu: tự động hóa quy trình Web Vulnerability Assessment phục vụ học thuật và demo.
+
+Không phải mục tiêu: công cụ pentest production hoặc khai thác tấn công chủ động.
+
+## 3. System Architecture
 
 ```mermaid
 flowchart TD
-    A[User Input: Target URL/IP] --> B[Orchestrator]
-    B --> C[Shared Memory Init]
-    C --> D[Phase 1: The Scout]
-    D --> E[Nmap Scan: Ports, Services, Versions]
-    E --> F[Raw Scan Data]
-    F --> G[Update Shared Memory]
-    G --> H[Phase 2: The Analyst]
-    H --> I[Read Context from Shared Memory]
-    I --> J[LLM Risk Analysis: CVE hints, severity, remediation]
-    J --> K[Update Shared Memory]
-    K --> L[Phase 3: The Writer]
-    L --> M[Read Full Context]
-    M --> N[Generate Pentest Report Markdown]
-    N --> O[Save Report + Memory JSON]
+    A[Input Target URL/IP] --> B[Orchestrator]
+    B --> C[SharedMemory]
+    C --> D[Phase 1 - Scout]
+    D --> E[Phase 2 - Analyst]
+    E --> F[Phase 3 - Verifier]
+    F --> G[Phase 4 - Writer]
+    G --> H[Save Artifacts]
+    H --> I[reports/YYYYMMDD_HHMMSS]
+    H --> J[reports/latest]
 ```
 
-## File Structure
+Luồng context:
 
-- `main.py`: CLI entrypoint (gọn, chỉ nhận input và chạy orchestrator).
-- `multiagent_pentest/orchestrator.py`: bộ điều phối luồng 3 phase.
-- `multiagent_pentest/shared_memory.py`: shared memory dùng chung giữa agents.
-- `multiagent_pentest/agents/scout_agent.py`: Agent 1, phụ trách Nmap recon.
-- `multiagent_pentest/agents/analyst_agent.py`: Agent 2, phụ trách LLM risk analysis.
-- `multiagent_pentest/agents/writer_agent.py`: Agent 3, phụ trách viết báo cáo.
-- `multiagent_pentest/llm_client.py`: khởi tạo OpenAI client.
-- `multiagent_pentest/config.py`: load env config.
-- `requirements.txt`: Python dependencies.
-- `.env.example`: environment variable template.
-- `reports/`: generated report output folder (auto-created).
+1. Scout ghi dữ liệu recon vào SharedMemory.
+2. Analyst đọc recon context để tạo findings.
+3. Verifier đọc findings + recon để xác minh và hiệu chỉnh confidence.
+4. Writer đọc toàn bộ context để sinh báo cáo cuối.
 
-## Suggested Team Split (3 Members)
+## 4. Key Features Implemented
 
-1. Member A - Recon Engineer
+1. CLI chạy scan theo target nhập tay hoặc qua tham số.
+2. Web UI Streamlit có sidebar run settings, recent runs, findings, report, artifacts.
+3. Timeout/fallback logic giúp tránh treo lâu ở target khó phản hồi.
+4. Verification layer với các nhãn:
+   - verification_status: Verified, Partially Verified, Hypothesis
+   - evidence_strength: Strong, Moderate, Weak
+5. CVE check qua NVD API cho cve_hint (kèm trạng thái và nguồn).
+6. Report Markdown chuẩn trình bày gồm:
+   - metadata, summary, recon table, findings table, remediation
+   - technical evidence
+   - verification summary
+   - performance metrics
+7. Mỗi lần chạy tạo 1 thư mục output riêng + snapshot latest.
 
-- Làm việc chính ở `multiagent_pentest/agents/scout_agent.py`
-- Nâng cấp scan profile, parse service banners, tuning Nmap arguments.
+## 5. Project Structure
 
-1. Member B - Security Analyst
+```text
+MultiAgent_Pentest/
+|-- main.py
+|-- streamlit_app.py
+|-- requirements.txt
+|-- README.md
+|-- .streamlit/config.toml
+|-- multiagent_pentest/
+|   |-- orchestrator.py
+|   |-- shared_memory.py
+|   |-- llm_client.py
+|   |-- config.py
+|   |-- error_handler.py
+|   `-- agents/
+|       |-- scout_agent.py
+|       |-- analyst_agent.py
+|       |-- verifier_agent.py
+|       `-- writer_agent.py
+`-- reports/
+```
 
-- Làm việc chính ở `multiagent_pentest/agents/analyst_agent.py`
-- Cải tiến prompt, chuẩn hóa severity/CVE confidence, thêm rule-based checks.
+## 6. Prerequisites
 
-1. Member C - Report and Integration
+1. Python 3.10+
+2. Nmap cài trên hệ điều hành và chạy được lệnh nmap --version
+3. OpenAI API key hợp lệ trong file .env
 
-- Làm việc chính ở `multiagent_pentest/agents/writer_agent.py` và `multiagent_pentest/orchestrator.py`
-- Tối ưu format báo cáo, theo dõi context flow, xử lý output (Markdown/PDF).
+## 7. Setup
 
-## Setup
-
-### 1) Prerequisites
-
-- Python 3.10+
-- Nmap installed in OS (`nmap --version` should work)
-
-### 2) Install dependencies
+### 7.1 Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3) Configure API key
+### 7.2 Configure environment
 
-- Copy `.env.example` to `.env`
-- Fill `OPENAI_API_KEY`
+Tạo file .env trong thư mục gốc, ví dụ:
 
-## Run
+```env
+OPENAI_API_KEY=your_key_here
+```
 
-### Interactive target input
+## 8. Run Instructions
+
+### 8.1 CLI mode
 
 ```bash
 python main.py
 ```
 
-### CLI target input
+Hoặc:
 
 ```bash
-python main.py --target scanme.nmap.org
+python main.py --target http://example.com --model gpt-4o-mini --output-dir reports
 ```
 
-Optional flags:
+### 8.2 Web UI mode (default port 8000)
 
-- `--model gpt-4o-mini`
-- `--output-dir reports`
+```bash
+python -m streamlit run streamlit_app.py
+```
 
-## Output
+Truy cập:
 
-When finished, system saves:
+```text
+http://localhost:8000
+```
 
-- `reports/pentest_report_YYYYMMDD_HHMMSS.md`
-- `reports/pentest_memory_YYYYMMDD_HHMMSS.json`
+## 9. Output Artifacts
 
-## Demo Script for Presentation
+Mỗi lần chạy sẽ tạo:
 
-1. Show architecture and workflow diagram.
-1. Run `python main.py --target scanme.nmap.org`.
-1. Explain Shared Memory (`phase_1_recon`, `phase_2_assessment`, `phase_3_report`).
-1. Open generated Markdown report and show findings + remediation.
-1. Show JSON memory file to prove context-aware flow across agents.
+1. reports/YYYYMMDD_HHMMSS/pentest_report_YYYYMMDD_HHMMSS.md
+2. reports/YYYYMMDD_HHMMSS/pentest_memory_YYYYMMDD_HHMMSS.json
+3. reports/YYYYMMDD_HHMMSS/pentest_execution_YYYYMMDD_HHMMSS.log
 
-## Important Ethical Note
+Và cập nhật snapshot mới nhất tại reports/latest.
 
-Use only on systems you own or have explicit written permission to test.
-This project is for defensive security learning and reporting.
+## 10. What Was Improved During Development
 
-## Project Docs
+1. Tối ưu timeout và fallback để giảm treo scan.
+2. Nâng pipeline từ 3 phase lên 4 phase với Verifier Agent.
+3. Thêm xác minh finding và hiệu chỉnh confidence.
+4. Thêm CVE check qua NVD API.
+5. Cải tiến report có evidence và verification summary.
+6. Bổ sung UI Streamlit sáng, dễ trình bày, recent runs bấm xem lại được.
 
-- Team assignment: `docs/TEAM_ASSIGNMENT.md`
-- Report checklist: `docs/REPORT_CHECKLIST.md`
-- **Academic report template (Self-Assessment):** `docs/ACADEMIC_REPORT_TEMPLATE.md` ⭐ **Start here for final submission**
-- Prompt evaluation template: `docs/PROMPT_EVALUATION_TEMPLATE.md`
-- Windows run guide: `docs/RUN_GUIDE_WINDOWS.md`
+## 11. Current Completion Status
+
+Đánh giá cho mục tiêu đồ án:
+
+1. Hoàn chỉnh để demo và bảo vệ.
+2. Đáp ứng đề tài Context-Aware Multi-Agent Web Vulnerability Assessment using LLMs.
+3. Có bằng chứng đầu ra rõ ràng và tái hiện được.
+
+## 12. Known Limitations
+
+1. Chưa phải production security scanner.
+2. CVE verification phụ thuộc NVD API/network.
+3. Chưa có benchmark tự động nhiều target trong UI.
+4. Chưa có adaptive rescan loop khi confidence thấp.
+
+## 13. Next Improvements (Optional)
+
+1. Thêm benchmark dashboard (thời gian, verified ratio, findings trend).
+2. Adaptive re-check cho finding hypothesis cao.
+3. Xuất PDF report và dashboard so sánh run.
+
+## 14. Ethics and Safety
+
+Chỉ dùng trên hệ thống bạn sở hữu hoặc đã có văn bản cho phép kiểm thử.
+
+Nghiêm cấm sử dụng dự án này cho hành vi tấn công trái phép.
