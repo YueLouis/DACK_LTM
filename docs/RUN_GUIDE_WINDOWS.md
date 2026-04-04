@@ -1,47 +1,70 @@
-# Huong Dan Chay Tren Windows
+# Hướng Dẫn Chạy Trên Windows
 
-## Buoc 1: Mo terminal trong thu muc project
+## 1) Chuẩn bị môi trường
 
-Di chuyen vao thu muc chua `main.py`.
-
-## Buoc 2: Cai dependencies
+1. Mở terminal tại thư mục project (nơi có file main.py).
+1. Cài dependencies:
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-## Buoc 3: Cau hinh API key
+1. Tạo file .env trong thư mục gốc và thêm API key:
 
-1. Copy `.env.example` thanh `.env`
-2. Dien gia tri `OPENAI_API_KEY`
+```env
+OPENAI_API_KEY=your_key_here
+```
 
-## Buoc 4: Chay chuong trinh
+1. Kiểm tra Nmap:
 
-### Cach A - Nhap tay target
+```powershell
+nmap --version
+```
+
+## 2) Chạy bằng CLI
+
+Nhập tay target:
 
 ```powershell
 python main.py
 ```
 
-### Cach B - Truyen target qua tham so
+Truyền target qua tham số:
 
 ```powershell
 python main.py --target scanme.nmap.org
 ```
 
-## Buoc 5: Kiem tra output
+## 3) Chạy bằng Web UI
 
-Sau khi chay xong, xem 2 file trong thu muc `reports/`:
+```powershell
+python -m streamlit run streamlit_app.py
+```
 
-- `pentest_report_YYYYMMDD_HHMMSS.md`
-- `pentest_memory_YYYYMMDD_HHMMSS.json`
+Mở trình duyệt:
 
-## Troubleshooting nhanh
+```text
+http://localhost:8000
+```
 
-- Loi `OPENAI_API_KEY`: kiem tra file `.env`.
-- Loi timeout API: he thong co fallback, van tao report.
-- Nmap khong chay: cai Nmap va kiem tra lenh `nmap --version`.
+## 4) Kiểm tra output
 
-## Luu y dao duc
+Mỗi run thành công tạo 3 artifact:
 
-Chi quet he thong ban so huu hoac co giay phep kiem thu hop le.
+1. pentest_report_YYYYMMDD_HHMMSS.md
+2. pentest_memory_YYYYMMDD_HHMMSS.json
+3. pentest_execution_YYYYMMDD_HHMMSS.log
+
+Các file nằm trong reports/YYYYMMDD_HHMMSS, đồng thời có snapshot mới nhất tại reports/latest.
+
+## 5) Troubleshooting nhanh
+
+1. Lỗi OPENAI_API_KEY: kiểm tra file .env và tên biến OPENAI_API_KEY.
+2. Timeout API: hệ thống có fallback local, báo cáo sẽ ghi rõ source fallback.
+3. Nmap không chạy: cài Nmap và thêm vào PATH.
+
+## 6) Lưu ý đạo đức
+
+Hệ thống này phục vụ học tập/nghiên cứu theo hướng phòng thủ.
+
+Chỉ quét trên môi trường lab hoặc hệ thống bạn có quyền kiểm thử hợp lệ.
